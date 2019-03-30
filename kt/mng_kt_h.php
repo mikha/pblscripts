@@ -16,42 +16,6 @@ function _ktview_mover(tr)
     //wnd.x-coordinate = 100;
 }
 
-function kt_OnRegister(form)
-{
-    form.error.value = "";
-    if( form.tour_name.value == "" )
-        form.error.value += "tour_name ";
-    if( form.payment.value == "")
-        form.error.value += "payment ";        
-    if( form.payment.value != 0 && 
-        (form.p1.value == "" || form.p1.value == 0))
-        form.error.value += "p1 ";        
-
-    if( form.error.value == "" )
-        form.state.value = "insert";
-    //form.action += '?p=new&mid='+form.mid.value;
-    form.action += '?p=new';
-    form.submit();
-}
-
-
-function kt_OnEdit(form)
-{
-    form.error.value = "";
-    if( form.payment.value == "")
-        form.errorerror.value += "payment ";        
-    if( form.payment.value != 0 && 
-        (form.p1.value == "" || form.p1.value == 0))
-        form.error.value += "p1 ";        
-
-    if( form.error.value == "" )
-        form.state.value = "apply";
-    
-    form.action += '?p=edit';
-    form.submit();
-}
-
-
 function _m_change(form)
 {
     //form.action += '?p=new&mid='+form.organizer.value;
@@ -86,124 +50,6 @@ function safe_var($var)
 	$var = htmlspecialchars( $var,  ENT_COMPAT | ENT_HTML401, ini_get("default_charset") );
 	return $var;
 }
-
-
-function kt_misc_canJoin($tour_data)
-{
-    global $db, $S;
-    $tid = $db->GetValue("SELECT team FROM p_managers WHERE p_managers.id=".$S->id,0);
-    $rating = $db->GetValue("SELECT rating FROM p_teams WHERE id=".$tid,0);    
-    
-    if( ($tour_data['minR'] > 0 && $rating < $tour_data['minR']) || 
-        ($tour_data['maxR'] > 0 && $rating > $tour_data['minR'])
-        ) return false;
-    return true;
-}
-
-function kt_view()
-{
-    ShowMainTable("Список коммерческих турниров");
-    //echo '<tr></tr>';
-    global $S,$db;
-    
-    $s = '
-      <form name = filter_form>
-      
-      <table align=center cols="4" width="90%" border="0" cellspacing="1" cellpadding="2" style="border: 1px solid #0066cc;">
-      <tr bgcolor="#e0e0e0">
-      <td width=10%><div align="center">
-        <input type=button value="Подать заявку на регистрацию нового турнира" onClick="javascript:kt_OnRegisterNewKT();" >
-      </div></td>
-      </tr>
-      </table>
-      </form>';
-
-    echo $s;
-
-
-    echo '<table align=center width="90%" border=0 cellspacing=1 cellpadding=2 style="border:1px solid #0066cc;" align=center>';
-    $th = '<tr height=10 bgcolor=#0066CC>';
-    $th .= '<td width="5%"><div align="center"><b><font color=white>№</font></b></div></td>';
-        $th .= '<td width="25%"><div align="center"><b><font color=white>Название турнира</font></b></div></td>';
-        $th .= '<td width="25%"><div align="center"><b><font color=white>Информация</font></b></div></td>';
-        $th .= '<td width="15%"><div align="center"><b><font color=white>Кол-во заявок</font></b></div></td>';
-        $th .= '<td width="15%"><div align="center"><b><font color=white>Свободных мест</font></b></div></td>';
-    $th .= '<td width="15%"><div align="center"><b><font color=white>Состояние</font></b></div></td>';
-    $th .= '</tr>';
-        
-        
-        //read data from DB
-        $s = "";
-        $idx = 0;
-        $SQL = " SELECT * FROM p_ktournaments ";
-        $res = $db->SendQuery($SQL);
-        if( !($row = mysql_fetch_assoc($res)))
-            $s = '<tr><td colspan=6><div align="center">Нет ни одного турнира</div></td></tr>';
-        else
-        do
-        {
-            $SQL = "SELECT team_id FROM p_kt_requests WHERE kt_id=".$row[id]." ORDER BY id";
-            $requests_res = $db->SendQuery($SQL);
-            $n_requests =0;
-            while ($request = mysql_fetch_assoc($requests_res) )
-                $n_requests ++;
-            
-            for($ti=1;$ti<=16;$ti++)
-                if( $row['tid'.$ti] == 0) break;
-            
-            $ti = 16-($ti-1);        
-            $idx++;
-            $bcolor ='#ffffff';
-            if( $row[manager] == $S->id) 
-            {
-                $fcolor='#FFFF00';
-                $bcolor='#aa55ff';
-                $url = "onClick= javascript:window.location.href='?p=edit&kt_id=".$row[id]."'";
-            }
-            else 
-            {
-                if( kt_misc_canJoin($row) )
-                {
-                    $fcolor="";
-                    if( $idx % 2 != 0) $bcolor = '#efefef';
-                    $url = "onClick= javascript:window.location.href='?p=join&kt_id=".$row[id]."'";
-                }
-                else
-                {
-                    $url = 0;
-                    $fcolor="red";
-                    $bcolor = '#afafaf';
-                }
-                
-            }
-            if( $row['state'] == 0 ) $state = "На модерации";
-            else $state = "Одобрен";
-            
-            
-            
-            $s .= "<tr onMouseOver=_ktview_mover(this) 
-                        onMouseOut=this.style.backgroundColor='".$bcolor."'
-                         ".$url." 
-                        bgcolor='".$bcolor."'>";
-            $s .= '
-            <td><div align="center"><font color='.$fcolor.'>'.$idx.'<div></td>
-        <td><div align="center"><font color='.$fcolor.'>'.$row[name].'<div></td>
-        <td><div align="center"><font color='.$fcolor.'>'.$row[comments].'<div></td>
-        <td><div align="center"><font color='.$fcolor.'>'.$n_requests.'<div></td>
-        <td><div align="center"><font color='.$fcolor.'>'.$ti.'<div></td>
-        <td><div align="center"><font color='.$fcolor.'>'.$state.'<div></td>
-            </tr>
-            ';
-        }
-        while($row = mysql_fetch_assoc($res));
-        
-        echo $th;
-        echo $s;
-        echo $th;
-        echo "</table>";
-        //EndMainTable();
-}
-
 
 function kt_misc_GetStadiumInfo($tid)
 {
@@ -382,7 +228,7 @@ class CPrizePos extends CFormVar {
 function print_form_kt()
 {
 	global $error, $text_error, $S, $db; 
-	// оишибка в форму
+	// оишибка в форме
 	$error = "";
 	// тектовое описание ошибок
 	$text_error = array();
@@ -517,7 +363,7 @@ function print_form_kt()
 			
 				$SQL .= ",'".safe_var($reglament)."'";
 				$SQL .= ",'".safe_var($comments)."'";
-				$SQL .= ",'$S->Team'";
+				$SQL .= ",'$S->Team'"; // текущая команда записывается как p_ktournaments.tid1 - это команда организатор
 				$SQL .= ")";
 
 				//echo "[$SQL]";
@@ -698,46 +544,15 @@ $("#payment").change();
 </script><?php 	
 }
 
-function create_newkt()
+function edit_newkt($create = false)
 {
-	ShowMainTable("Оформление заявки на регистрацию нового коммерческого турнира");
+    $table_title = "Редактирование заявки на регистрацию коммерческого турнира";
+    if ($create == true) {
+        $table_title = "Оформление заявки на регистрацию нового коммерческого турнира";
+    }
+	ShowMainTable($table_title);
 	if ((GS_SEZON_STATE != 'playoff') && (GS_SEZON_STATE != 'euro')&& (GS_SEZON_STATE != 'mezsezon')) {
-		print_error("Регистрация в настоящий момент закрыта");
-		EndMainTable();
-		ShowPart(4);
-		ShowEnd();
-		exit();
-	}
-	
-	global $S,$db;
-
-	// Проверяем участников КА
-	$SQL = "SELECT count(*) FROM p_team_tour WHERE team = $S->Team AND tournament =192";
-	$ka = $db->GetValue($SQL,0);
-	if ($ka > 0){
-		BS_print_error("Нельзя совмещать участие в Кубке аутсайдеров с участием в коммерческом турнире");
-		return;
-	}
-	if ($S->Team <= 1) {
-		BS_print_error("Для регистрации КТ необходимо залогиниться");
-		return;
-	}
-
-	//нет ли уже в БД турнира этого манагера?
-	$found = $db->GetValue("SELECT id FROM p_ktournaments WHERE manager=".$S->id,0);
-	if($found)	{
-		echo "<br><font color='red'>Вы не можете регистрировать более одного турнира.<font><br>";
-		return;
-	}
-	
-	print_form_kt();
-}
-
-function edit_newkt()
-{
-	ShowMainTable("Редактирование заявки на регистрацию коммерческого турнира");
-	if ((GS_SEZON_STATE != 'playoff') && (GS_SEZON_STATE != 'euro')&& (GS_SEZON_STATE != 'mezsezon')) {
-		print_error("Регистрация в настоящий момент закрыта");
+		BS_print_error("Регистрация в настоящий момент закрыта");
 		EndMainTable();
 		ShowPart(4);
 		ShowEnd();
@@ -759,406 +574,18 @@ function edit_newkt()
 	}
 	
 	//нет ли уже в БД турнира этого манагера?
-	$found = $db->GetValue("SELECT id FROM p_ktournaments WHERE manager=".$S->id,0);
-	if($found == "")	{
-		echo "<br><font color='red'>Вы еще не подвали заявку на орагнизаицю турнира.<font><br>";
+	$my_kt = intval( $db->GetValue("SELECT id FROM p_ktournaments WHERE manager=".$S->id,0) );
+	if(($my_kt == 0) && ($create == false))	{
+		BS_print_error("Вы еще не подвали заявку на орагнизаицю турнира");
 		return;
 	}
-	
+	if(($my_kt > 0) && ($create == true))	{
+		BS_print_error("Вы не можете регистрировать более одного турнира");
+		return;
+	}
+
 	print_form_kt();
 	
-}
-
-function kt_new()
-{
-    ShowMainTable("Оформление заявки на регистрацию нового коммерческого турнира");
-    //echo '<tr></tr>';
-    if ((GS_SEZON_STATE != 'playoff') && (GS_SEZON_STATE != 'euro')&& (GS_SEZON_STATE != 'mezsezon')) {
-      print_error("Регистрация в настоящий момент закрыта");
-      EndMainTable();
-      ShowPart(4);
-      ShowEnd();
-      exit();
-    }
-    
-    global $S,$db;
-
-    // Проверяем участников КА
-    $SQL = "SELECT count(*) FROM p_team_tour WHERE team = $S->Team AND tournament =192";
-    $ka = $db->GetValue($SQL,0);
-    if ($ka > 0){
-        BS_print_error("Нельзя совмещать участие в Кубке аутсайдеров с участием в коммерческом турнире");
-        return;
-    }
-    if ($S->Team <= 1) {
-        BS_print_error("Для регистрации КТ необходимо залогиниться");
-        return;
-    }
-    
-    if( !isset($_POST['mid']) )
-    {
-        $_POST['payment'] = 0;
-    
-        $mid = $S->id;
-    }
-    else
-        $mid = intval( $_POST['mid'] );
-    //echo "<hr>$mid-".$_POST['payment']."</hr>"    ;
-    //нет ли уже в БД турнира этого манагера?
-    $found = $db->GetValue("SELECT id FROM p_ktournaments WHERE manager=".$mid,0);  
-    if($found)
-    {
-        echo "<br>
-            <font color='red'>Вы не можете регистрировать более одного турнира.<font><br>";
-        return;
-    }
-    
-    $tid = $db->GetValue("SELECT team FROM p_managers WHERE p_managers.id=".$mid,0);
-    
-    if( isset( $_POST['state'] ) && $_POST['state']=='insert' ) {
-        //проверяем призовые
-        $sum = 0;
-        for($i=0;$i<4;$i++)
-         for($j=1;$j<5;$j++)
-         {
-            $idx_p = $i*4 + $j;
-            $sum += $_POST['p'.$idx_p];
-         }
-         //echo $sum;
-         if( $sum <= $_POST['prize'] )
-         {
-            
-            //добавляем турнир в таблицу
-            $SQL = "
-                INSERT INTO p_ktournaments 
-                (id,name,manager,payment,minR,maxR,minP,maxP,
-                p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16,reglament,
-                comments,tid1)
-                VALUES ( ";
-            $SQL .= "'','".mysql_real_escape_string(safe_var($_POST['tour_name']))."','".$_POST['mid']."','".$_POST['payment']."','".$_POST['minR']."',            '".$_POST['maxR']."','".$_POST['minP']."','".$_POST['maxP']."'";
-            for($i=0;$i<4;$i++)
-                for($j=1;$j<5;$j++)
-                {
-                   $idx_p = $i*4 + $j;
-                   $SQL .= ",'".$_POST['p'.$idx_p]."'";
-                }  
-            $SQL .= ",'".safe_var($_POST['reglament'])."'";
-            $SQL .= ",'".safe_var($_POST['comments'])."'";
-            $SQL .= ",'".$tid."'";
-            $SQL .= ")";
-            
-            global $S;
-            if ($S->Team == 649) {
-            	echo "[$SQL]";
-            }
-        
-            $res = $db->SendQuery($SQL);
-            if ($res != true){
-            	echo "<br><font color='red'>Ошибка добавления турнира в базу данных.</font><br>";
-            	echo mysql_errno().": ".mysql_error();
-            	return ;
-            }
-            //if ($S->User > 2) echo "[$SQL]";
-            
-            echo "<br>
-             <font color='green'>Ваша заявка принята.</font><br>";
-            return ;
-         }
-         else
-         {
-             $_POST['state']='fill';
-             echo "<br>
-             <font color='red'>Ошибка: сумма призовых по 
-             местам превышает общий призовой фонд...<font><br>";
-         }
-        
-    }        
-     
-    
-    
-    list($ssize,$tname) = kt_misc_GetStadiumInfo($tid);
-    
-    $prize = $_POST['payment']*16;
-    $prize .= ' ktlr';
-    $s = '
-    <form name=f1 action="" method="POST">
-    <input name=error value="none" type="hidden">
-    <input name=state value="fill" type="hidden">
-    <input name=mid value='.$mid.' type="hidden">
-    <table align=center cols="4" width="90%" border="0" cellspacing="1" cellpadding="2" style="border: 1px solid #0066cc;">
-    <tr bgcolor="#ffffff">    
-    <td width=25%><div align="center">
-        <table width="90%">
-        <tr><div align="center">Название турнира:</div></tr>
-        <tr>
-          <td><div align="center">
-           <input name=tour_name maxlength="30"';
-            if( isset( $_POST['error'] ) && strstr($_POST['error'],"tour_name")!= FALSE) {
-            	$s .= ' class=form3 ';           
-            	$s .=' value='.$_POST['tour_name'].'>';
-            } else {
-            	$s .=' value="">';
-            }
-          $s .='</div></td>
-        </tr>
-        </table>
-    </div></td>
-    <td width=25%><div align="center">
-        <table width="90%">
-        <tr><div align="center">Организатор:</div></tr>
-        <tr>
-          <td><div align="center">';
-            if($S->User > 3){
-                $s .= '<select class=form2 name=organizer onChange="_m_change(f1)">';
-                $SQL = "SELECT id,name,surname
-                          FROM p_managers 
-                         WHERE team > 0
-                         ORDER BY surname DESC";
-                //$res = mysql_query($SQL);
-                $res = $db->SendQuery($SQL);
-                while ($row = mysql_fetch_assoc($res)) {
-                    $s .=  '<option ';
-                    if( $row['id'] == $mid) $s .= 'selected ';
-                    $s .= 'value='.$row['id'].'>'.$row['surname'].' '.$row['name'];
-                }
-                $s .=  ' </select>';
-            } else {
-                $s .= '<input name=organizer value=';
-                $s .= '"'.$S->Surname.' '.$S->Name.'"';
-                $s .= ' readonly="">';
-            }
-            $s .= '
-          </div></td>
-        </tr>
-        </table>
-    </div></td>
-    <td width=25%><div align="center">
-        <table width="90%">
-        <tr><div align="center">Команда:</div></tr>
-        <tr>
-          <td><div align="center">';
-            $s .= '<input name=stad value=';
-            $s .= $tname;
-            $s .= ' readonly="">
-          </div></td>
-        </tr>
-        </table>
-    </div></td>
-    <td width=25%><div align="center">
-        <table width="90%">
-        <tr><div align="center">Cтадион:</div></tr>
-        <tr>
-          <td><div align="center">';
-            $s .= '<input name=stad value=';
-            $s .= $ssize;
-            $s .= ' readonly="">
-          </div></td>
-        </tr>
-        </table>
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">  
-        <td width=60% colspan=2><div align="right">
-        <table>
-        <tr height=15><td><td></tr>
-        <tr>  
-        <td  colspan=2><div align="right">
-            Рейтинг участвующих команд:
-        </div></td></tr>
-        </table>
-        <td width=20%><div align="center">
-        <table>
-        <tr><td><div align="center">Минимальный:</div><td></tr>
-        <tr><td><div align="center">';
-                $s .= '<input name=minR value=';
-                if ( isset( $_POST['minR'] ) ) $s .= $_POST['minR'];
-                $s .= '>
-        </div></td></tr>
-        </table>
-        </div></td>
-        <td width=20% ><div align="center">
-        <table>
-        <tr><td><div align="center">Максимальный:</div><td></tr>
-        <tr>
-        <td><div align="center">';
-                $s .= '<input name=maxR value=';
-                if (isset( $_POST['maxR'] ) ) $s .= $_POST['maxR'];
-                $s .= '>
-        </div></td></tr>
-        </table>
-        </div><td>
-    </tr>   
-    <tr bgcolor="#ffffff">  
-        <td width=60% colspan=2><div align="right">
-        <table>
-        <tr height=15><td><td></tr>
-        <tr>  
-        <td  colspan=2><div align="right">
-            Сила 11-ти лучших:
-        </div></td></tr>
-        </table>
-        <td width=20%><div align="center">
-        <table>
-        <tr><td><div align="center">Минимальная:</div><td></tr>
-        <tr><td><div align="center">';
-                $s .= '<input name=minP value=';
-                if (isset($_POST['minP']) ) $s .= $_POST['minP'];
-                $s .= '>
-        </div></td></tr>
-        </table>
-        </div></td>
-        <td width=20% ><div align="center">
-        <table>
-        <tr><td><div align="center">Максимальная:</div><td></tr>
-        <tr>
-        <td><div align="center">';
-                $s .= '<input name=maxP value=';
-                if (isset( $_POST['maxP'] ) )   $s .= $_POST['maxP'];
-                $s .= '>
-        </div></td></tr>
-        </table>
-        </div><td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=50% colspan=2><div align="center">
-        <table width="90%">
-        <tr><div align="center">Взнос (ktlr):</div></tr>
-        <tr>
-          <td><div align="center">
-           <input name=payment ';
-           if( isset( $_POST['error'] ) && strstr($_POST['error'],"payment") != FALSE){
-                $s .= ' class=form3 ';                
-           }
-           if ( isset( $_POST['payment'] ) ) {
-           		$s .=' value='.$_POST['payment'];
-           } else {
-           	$s .=' value=""';
-           }
-           $s .=' onKeyUp="_payment_change(f1)">
-          </div></td>
-        </tr>
-        </table>
-    </div></td>
-    <td width=50% colspan=2><div align="center">
-        <table width="90%">
-        <tr><div align="center">Призовые:</div></tr>
-        <tr>
-          <td><div align="center">';
-            $s .= '<input name=prize value="';
-            $s .= $prize.'"';
-            $s .= ' readonly=""> <span>Распределено: <span id=money_set></span> kTlr</span>
-          </div></td>
-        </tr>
-        </table>
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% height=20 colspan=4><div align="center">
-    <label></label>
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% height=30 colspan=4><div align="center">
-    <label><strong>Распределение призовых по местам (ktlr):</strong></label>
-    </div></td>
-    </tr>';
-    for( $l=0;$l<4;$l++)
-    {
-        $s .= '<tr bgcolor="#ffffff">';
-        for( $r=1;$r<5;$r++)
-        {
-            $rn = $r+$l*4;
-            $s .= '
-        <td width=25%><div align="center">
-        <table width="90%">
-        <tr><div align="center">'.$rn.':</div></tr>
-        <tr>
-          <td><div align="center">';
-            $s .= '<input class=money name=p'.$rn.' ';
-		if($rn==1 && isset( $_POST['error'] ) && strstr($_POST['error'],"p1") != FALSE){
-            $s .= ' class=form3 ';                
-		}
-		$post_p = "";
-		if ( isset( $_POST['p'.$rn] ) ) $post_p = $_POST['p'.$rn];
-
-		$s .= ' value='.$post_p;
-        $s .= '>
-          </div></td>
-        </tr>
-        </table>
-        </div></td>';
-        }
-     $s .= '</tr>';
-    }
-    $s .= '
-    <tr bgcolor="#ffffff">
-    <td width=100% height=20 colspan=4><div align="center">
-    <label><strong></strong></label>
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% colspan=4><div align="center">
-    <label>Регламент (распределение мест в группах при равенстве очков, сетка турнира):</label>
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% colspan=4><div align="center">';
-    
-    $reglament = "";
-    if ( isset( $_POST['reglament'] ) ) $reglament = $_POST['reglament'];
-    
-    $comment = "";
-    if ( isset( $_POST['comments'] ) ) $comment = $_POST['comments'];
-        		
-    $s .= inceditor("reglament",$reglament,"1","100",false)
-    //<textarea name=reglament value="'.$_POST['reglament'].'" rows="10" cols="100" maxlength="5000"></textarea>
-    .'</div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% colspan=4><div align="center">
-    <label>Ссылка на форум турнира (с префиксом https://):</label>
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% colspan=4><div align="center">
-    <input name=comments value="'.$comment.'" maxlength="255" size="100">
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% height=20 colspan=4><div align="center">
-    <label><strong></strong></label>
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% height=30 colspan=4><div align="center">
-    <input type=button value="Отправить" onClick="javascript:kt_OnRegister(f1);" >
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% height=10 colspan=4><div align="center">
-    <label><strong></strong></label>
-    </div></td>
-    </tr>
-    </table>';
-    
-	$s.= '<script>
-    var all_money;
-    $("input.money").change( function() {
-		var el = $("input.money");
-    	all_money = 0;
-    	for(var i=0; i< el.length; i++){
-    		var val = parseInt (el.eq(i).val() );
-    		if ( isNaN(val) ) continue;
-    		all_money += val;
-		}
-    	$("#money_set").text(all_money);
-	});
-    </script>';    
-    
-    echo $s;
-    
-    
-        //EndMainTable();
 }
 
 function kt_join()
@@ -1200,302 +627,6 @@ function kt_join()
     //EndMainTable();
 }
 
-
-function kt_edit()
-{
-    global $S,$db,$kt_id;
-    
-    if( !isset($kt_id))  $kt_id=$_POST['kt_id'];
-    
-    $SQL = " SELECT * FROM p_ktournaments WHERE id=".$kt_id;
-    $res = $db->SendQuery($SQL);
-    if( !($kt_data = mysql_fetch_assoc($res))) exit("ошибка");
-    $tid = $db->GetValue("SELECT team FROM p_managers WHERE p_managers.id=".$S->id,0);
-    ShowMainTable($kt_data["name"]);
-
-    if ($kt_data["state"] == 2) {
-        BS_print_error("Редактирование КТ больше невозможно");
-        return ;
-    }  
-
-        //echo "<ht>".$_POST['state'];
-    if( isset( $_POST['state'] ) && $_POST['state']=='apply' ) {
-        //проверяем призовые
-        $sum = 0;
-        for($i=0;$i<4;$i++)
-         for($j=1;$j<5;$j++)  {
-            $idx_p = $i*4 + $j;
-            $sum += $_POST['p'.$idx_p];
-         }
-         //echo "<br>SUM=$sum POST=".$_POST['prize'];
-         if ($_POST['payment'] <= 0) {
-            $_POST['payment'] = $db->GetValue("SELECT payment FROM  p_ktournaments WHERE id=".$kt_id,0);
-         }    
-         if( $sum <= $_POST['prize'] )  {
-            //записываем данные в БД
-            $SQL = "UPDATE p_ktournaments SET ";
-            $SQL.= "minR = ".$_POST['minR'].",
-                maxR = ".safe_var($_POST['maxR']).",
-                minP = ".safe_var($_POST['minP']).",
-                maxP = ".safe_var($_POST['maxP']).",
-                reglament = '".safe_var($_REQUEST['reglament'])."',
-                comments = '".safe_var($_REQUEST['comments'])."'";
-            if ($kt_data["state"] == 0) 
-                if (isset($_POST['payment']) ) $SQL.= ", payment = ".safe_var($_POST['payment']);
-            for($i=0;$i<4;$i++)
-                for($j=1;$j<5;$j++)  {
-                   $idx_p = $i*4 + $j;
-                   if (!isset($_POST["p".$idx_p])) continue;
-                   $SQL .= ",p".$idx_p."=".$_POST['p'.$idx_p];
-                }  
-            
-            $SQL .= " WHERE id=".$kt_id;
-            
-            global $S;
-            if ($S->Team == 649) {
-            	echo "[$SQL]";
-            }
-            //echo "<br>[$SQL] ";
-            $res = $db->SendQuery($SQL);
-            if ($res != true){
-            	echo "<br><font color='red'>Ошибка редактирования данных турнира в базе данных.</font><br>";
-            	echo mysql_errno().": ".mysql_error();
-            	return ;
-            }
-            echo "<br>
-             <font color='green'><b>Изменения внесены.</b></font><br>";
-         } else {
-             //$_POST['state']='edit';
-             echo "<br>
-             <font color='red'><b>Ошибка: сумма призовых по 
-             местам превышает общий призовой фонд...</b></font><br>";
-         }
-        
-    }
-    elseif( isset($_POST['error']) ) {
-        //$_POST['state']='edit';
-        echo "<br>".$_POST['error']."
-         <font color='red'><b>Ошибка!</b></font><br>";
-    } else {
-        $_POST['payment'] = $kt_data['payment'];
-        $_POST['minR'] = $kt_data['minR'];
-        $_POST['maxR'] = $kt_data['maxR'];
-        $_POST['minP'] = $kt_data['minP'];
-        $_POST['maxP'] = $kt_data['maxP'];
-        for($p_idx=1;$p_idx<=16;$p_idx++)
-            $_POST['p'.$p_idx] = $kt_data['p'.$p_idx];
-        $_POST['comments'] = $kt_data['comments'];
-        $_POST['reglament'] = $kt_data['reglament'];
-    }        
-     
-    
-    //берем данные о команде организатора
-        $SQL = "SELECT p_teams.name, p_teams.city,
-                       p_teams.stadion, p_teams.stadion_name, p_country.name AS country FROM p_teams, p_country 
-            WHERE p_teams.id = $tid AND p_teams.country = p_country.id";
-    $res = $db->SendQuery($SQL);            
-    if( !($team_data = mysql_fetch_assoc($res))) exit("ошибка");
-    
-    
-        echo "<p>Организатор: <i>".$S->Surname." ".$S->Name." aka <b>".$S->Nick."</b></i><br>";
-        echo "Команда: <i>".$team_data['name']."(".$team_data['city'].",".$team_data['country'].")</i><br>";
-        echo "Стадион: <i>".$team_data['stadion_name']."(<b>".$team_data['stadion']."</b>)</i><br>";
-
-    //list($ssize,$tname) = kt_misc_GetStadiumInfo($tid);
-    
-    $prize = $_POST['payment']*16;
-    $prize .= ' ktlr';
-    $s = '
-    <form name=f1 action="" method="POST">
-    <input name=error value="none" type="hidden">
-    <input name=state value="apply" type="hidden">
-    <input name=kt_id value='.$kt_id.' type="hidden">
-    
-    <table width=550 border="0" cellspacing="2" cellpadding="0">
-     <tr>  
-       <td></td>
-       <td><div align="center">Минимальный:</div></td>
-       <td><div align="center">Максимальный:</div></td>
-     </tr>  
-     <tr>
-        <td>Рейтинг участвующих команд:</td>
-        <td><div align="center">';
-                $s .= '<input name=minR value=';
-                $s .= $_POST['minR'];
-                $s .= '>
-        </div></td>
-        <td><div align="center">';
-                $s .= '<input name=maxR value=';
-                $s .= $_POST['maxR'];
-                $s .= '>
-        </div></td>
-     </tr>   
-    
-     <tr>  
-       <td></td>
-       <td><div align="center">Минимальная:</div></td>
-       <td><div align="center">Максимальная:</div></td>
-     </tr>  
-     <tr>
-        <td>Сила 11-ти лучших:</td>
-        <td><div align="center">';
-                $s .= '<input name=minP value=';
-                $s .= $_POST['minP'];
-                $s .= '>
-        </div></td>
-        <td><div align="center">';
-                $s .= '<input name=maxP value=';
-                $s .= $_POST['maxP'];
-                $s .= '>
-        </div></td>
-     </tr>   
-    </table> 
-    <br>
-    <table width=250 border="0" cellspacing="2" cellpadding="0">';
-
-    // редактирвоание призовых доступно только до одобрения турнира            
-    $SQL = "SELECT state FROM p_ktournaments WHERE id = $kt_id AND tid1 = $S->Team";
-    $ed = $db->GetValue($SQL,0);
-    if ($ed > 0) $ed =' disabled';
-    else $ed = "";
-    //echo "<hr>ED=[$ed] ";
-    
-    //if ($db->GetValue($SQL,0) == 0) {
-                
-     $s.='<tr>
-      <td>Взнос (ktlr):</td>
-      <td>
-        <input name=payment '.$ed;
-           if( isset( $_POST['error'] ) && strstr($_POST['error'],"payment") != FALSE)
-                $s .= ' class=form3 ';                
-            $s .=' value='.$_POST['payment'].' 
-                onKeyUp="_payment_change(f1)">
-      </td>
-     </tr>
-     <tr>
-      <td>Призовые:</td>
-      <td>';
-            $s .= '<input name=prize value="';
-            $s .= $prize.'"'.$ed;
-            $s .= ' readonly="">
-      </td>
-     </tr>
-    </table>
-    <br>
-    <table>';
-    
-        $s.='<tr>
-    <td width=100% height=30 colspan=4><div align="center">
-    <label><strong>Распределение призовых по местам (ktlr):</strong></label>
-    </div></td>
-    </tr>';
-    for( $l=0;$l<4;$l++) {
-        $s .= '<tr bgcolor="#ffffff">';
-        for( $r=1;$r<5;$r++) {
-            $rn = $r+$l*4;
-            $s .= '
-        <td width=25%><div align="center">
-        <table width="90%">
-        <tr><div align="center">'.$rn.':</div></tr>
-        <tr>
-          <td><div align="center">';
-            $s .= '<input name=p'.$rn.' '.$ed;
-          if($rn==1 && isset( $_POST['error'] ) && strstr($_POST['error'],"p1") != FALSE)
-            $s .= ' class=form3 ';                
-            $s .= ' value='.$_POST['p'.$rn];
-            $s .= '>
-          </div></td>
-        </tr>
-        </table>
-        </div></td>';
-        }
-     $s .= '</tr>';
-    }
-    //}/* редактирвоание призовых */
-    /*
-    else {
-        $s.='        <input type=hidden name=payment ';
-        $s .=' value='.$_POST['payment'].'>';
-        $s.="<input type=hidden name=id value=$kt_id>";
-        $s.="<input type=hidden name=prize value=$sum>";
-        for ($rn = 1; $rn<=16; $rn++) {
-            $s.="<input type=hidden name=p$rn value=".$_POST["p".$rn].">";
-        }
-    }*/
-    $s .= '
-    <tr bgcolor="#ffffff">
-    <td width=100% height=20 colspan=4><div align="center">
-    <label><strong></strong></label>
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% colspan=4><div align="center">
-    <label>Регламент (распределение мест в группах при равенстве очков, сетка турнира):</label>
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% colspan=4><div align="center">'.
-    inceditor("reglament",$_POST['reglament'],"1","100",false)
-    .'</div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% colspan=4><div align="center">
-    <label>Ссылка на форум турнира (с префиксом https://):</label>
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% colspan=4><div align="center">
-    <input name=comments value="'.$_POST['comments'].'" maxlength="255" size="100">
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% height=20 colspan=4><div align="center">
-    <label><strong></strong></label>
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% height=30 colspan=4><div align="center">
-    <input type=button value="Внести изменения" onClick="javascript:kt_OnEdit(f1);" >
-    </div></td>
-    </tr>
-    <tr bgcolor="#ffffff">
-    <td width=100% height=10 colspan=4><div align="center">
-    <label><strong></strong></label>
-    </div></td>
-    </tr>
-    </table>';
-    
-    echo $s;
-    
-    $SQL = "SELECT * FROM p_kt_requests WHERE kt_id=".$kt_id;
-        $res = $db->SendQuery($SQL);
-        $s ="
-    <select class=multiselect multiple size=10>";
-     
-    while ($request = mysql_fetch_assoc($res) )
-        {
-            $SQL = "SELECT p_teams.name, p_teams.city, p_country.name AS country 
-                    FROM p_teams, p_country 
-                    WHERE p_teams.id =".$request['team_id']." AND p_teams.country = p_country.id";
-        $team_res = $db->SendQuery($SQL);           
-        if( !($team_data = mysql_fetch_assoc($team_res))) continue;
-            $s .= "<option value=".$request['team_id'].">";
-            $s .= $team_data['name']."(".$team_data['city'].",".$team_data['country'].")";
-            
-            $money = $db->GetValue("SELECT money FROM p_teams WHERE id = ".$request['team_id'],0) ;
-            if ($money < $kr_data["payment"]*1000) {
-                if ($kt_data["state"] < 2)                 $s.= " - Не хватает средств";
-            }
-        }
-        $s .= "</select>";
-    
-    echo $s;
-    
-    echo "<p><a href=?p=set&id=$kt_id>Выбрать участников турнира</a>";
-
-    //EndMainTable();
-}
-
 /**
 * Функция формы выбора участников КТ из имеющихся заявок
 */
@@ -1504,9 +635,9 @@ function set_team_kt($id)
     global $db, $S;
     
     //нет ли уже в БД турнира этого манагера?
-    $found = $db->GetValue("SELECT id FROM p_ktournaments WHERE manager=".$S->id,0);
-    if($found == "")	{
-		// мы не организаторы КТ - это не нашак функция
+    $my_kt = intval( $db->GetValue("SELECT id FROM p_ktournaments WHERE manager=".$S->id,0) );
+    if($my_kt != $id)	{
+		// мы не организаторы этого(!) КТ - это не наша функция
     	return;
     }
     
@@ -1585,7 +716,7 @@ function set_team_kt($id)
         if ($team > 1){
             $del_text = "<a href=?p=del_team&id=$id&tid=$t>";
             $del_text .= " <img src='media/del_mes.gif' title='Удалить заявку' border=0></a>";      
-            if($t==1) $del_text="";
+            if($t==1) $del_text=""; // первая команда - организатор, удалять нельзя
 
             $money = $db->GetValue("SELECT money FROM p_teams WHERE id = $team",0) ;
             if ($money < $trow["payment"]*1000) {
@@ -1633,7 +764,7 @@ function set_team_kt($id)
 */
 function delete_team_from_kt($tid,$id)
 {
-    if ($tid == 1) return ;
+    if ($tid == 1) return ; // первая команда - организатор, удалять нельзя
 
     global $db;
     
@@ -1643,7 +774,7 @@ function delete_team_from_kt($tid,$id)
 /**
  * Вывод списка действующих КТ
  */
-function view_currnet_KT()
+function view_current_KT()
 {
     global $db;
     // настройки цветовой раскраски КТ
@@ -1655,23 +786,26 @@ function view_currnet_KT()
 
     echo "<p><h3>Список коммерческих турниров</h3>";
     
-    $s = '
-      <form name = filter_form>
-      
-      <table align=center cols="4" width="90%" border="0" cellspacing="1" cellpadding="2" style="border: 1px solid #0066cc;">
-      <tr bgcolor="#e0e0e0">
-      <td width=10%><div align="center">
-        <input type=button value="Подать заявку на регистрацию нового турнира" onClick="javascript:kt_OnRegisterNewKT();" >
-      </div></td>
-      </tr>
-      </table>
-      </form>';
+    // наш турнир (один турнир на менеджера, вне зависимости от кол-ва управляемых команд)
+    $my_kt = intval( $db->GetValue("SELECT id FROM p_ktournaments WHERE manager=".$S->id,0) );
 
-    echo $s;
+    if ($my_kt == 0) {
+        $s = '
+          <form name = filter_form>
+
+          <table align=center cols="4" width="90%" border="0" cellspacing="1" cellpadding="2" style="border: 1px solid #0066cc;">
+          <tr bgcolor="#e0e0e0">
+          <td width=10%><div align="center">
+            <input type=button value="Подать заявку на регистрацию нового турнира" onClick="javascript:kt_OnRegisterNewKT();" >
+          </div></td>
+          </tr>
+          </table>
+          </form>';
+
+        echo $s;
+    }
     
     global $S;
-    // наш турнир
-    $my_kt = intval( $db->GetValue("SELECT id FROM p_ktournaments WHERE manager=".$S->id,0) );
 
     $SQL = "SELECT * FROM p_ktournaments WHERE state >= 0 ORDER BY state ";
     $res = $db->SendQuery($SQL);
@@ -1801,13 +935,11 @@ function print_kt_info( $admin = false )
         return;
     }
     $nrow = mysql_fetch_array($m_res);
-    echo "<p>Организатор: ". $nrow["nick"]." | ".getTeamInfo($nrow["team"])."";
+    $team_org = $row["tid1"]; // внимание! команда организатор - первая в списке участников, а не команда менеджера $nrow["team"]
+    echo "<p>Организатор: ". $nrow["nick"]." | ".getTeamInfo($team_org)."";
 
-    $SQL = "SELECT stadion FROM p_teams WHERE id = ".$nrow["team"];
+    $SQL = "SELECT stadion FROM p_teams WHERE id = ".$team_org;
     echo "<p>Стадион: ".$db->GetValue($SQL,0);
-
-    //$SQL = "SELECT stadion FROM p_teams WHERE id = ".$nrow["team"];
-    //echo "<p>Стадион: ".$db->GetValue($SQL,0);
 
     echo "<p>Взнос: ".$row["payment"]." Ktlr";
 
@@ -1848,30 +980,29 @@ function print_kt_info( $admin = false )
         echo "Призовой фонд КТ: ".($row["payment"]*16)." из них распределено $all_prize";
         if ($all_prize != ($row["payment"]*16) ) {
             BS_print_error("Ошибка в распределении призовых");
-	    $error = true;
+	        $error = true;
         }
             
-   if ($row["p1"] > 30 * 0.16 * $row["payment"])
-   {
-       print_error("Ошибка - много призовых за 1 место");
-       $error = true;
-   }
-   if ($row["p16"] > 0)
-   {
-       print_error("Ошибка - много призовых за 16 место");
-       $error = true;
-   }
-   if (($row["p13"] + $row["p14"] + $row["p15"]) > 5 * 0.16 * $row["payment"])
-   {
-       print_error("Ошибка - много призовых за 13-15 место");
-       $error = true;
-   }
-   if (($row["p12"] + $row["p11"] + $row["p10"] + $row["p9"]) > 10 * 0.16 * $row["payment"])
-   {
-       print_error("Ошибка - много призовых за 9-12 место");
-       $error = true;
-   }
-               
+       if ($row["p1"] > 30 * 0.16 * $row["payment"])
+       {
+           print_error("Ошибка - много призовых за 1 место");
+           $error = true;
+       }
+       if ($row["p16"] > 0)
+       {
+           print_error("Ошибка - много призовых за 16 место");
+           $error = true;
+       }
+       if (($row["p13"] + $row["p14"] + $row["p15"]) > 5 * 0.16 * $row["payment"])
+       {
+           print_error("Ошибка - много призовых за 13-15 место");
+           $error = true;
+       }
+       if (($row["p12"] + $row["p11"] + $row["p10"] + $row["p9"]) > 10 * 0.16 * $row["payment"])
+       {
+           print_error("Ошибка - много призовых за 9-12 место");
+           $error = true;
+       }
     }
    
 
@@ -1958,7 +1089,7 @@ function print_el($str, $val)
 /**
 * Проверить то,что команда удовлетворяет условиям КТ
 *
-* @param $id идентификатор зачвки на организацию турнира
+* @param $id идентификатор заявки на организацию турнира
 *
 * @return 
 *   - true - можно подавать заявку
@@ -1985,7 +1116,7 @@ function check_kt_access($id)
         return false;
     }
     
-    // А вдруг у нас уже есть свой туринир
+    // А вдруг у нашей команды уже есть свой туринир
     $SQL = "SELECT count(*) FROM p_ktournaments WHERE tid1 = $S->Team";
     $org = $db->GetValue($SQL,0);
     if ($org >0) {
@@ -2007,11 +1138,22 @@ function check_kt_access($id)
     
     if ($tour_data["state"]==0){
         BS_print_error("Турнир пока закрыт для приема заявок до прохождения модерации");
-        return ;
+        return false;
     }
     if ($tour_data["state"]==2){
         BS_print_error("Прием заявок на участие в турнире закончен");
-        return ;
+        return false;
+    }
+    $empty_places = false;
+    for($m=2; $m<=16; $m++){
+        if ($tour_data["tid".$m] <= 1) {
+            $empty_places = true;
+            break;
+        }
+    }
+    if ($empty_places==false){
+        BS_print_error("Турнир уже набрал всех участников");
+        return false;
     }
     
     // проверяем рейтинг

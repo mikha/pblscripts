@@ -20,67 +20,54 @@ if( !isset($p) ) $p="view";
 switch($p)
 {
     case "view":{
-        //kt_view();
-         view_currnet_KT();
+        view_current_KT();
     }break;
 
     case "viewkt":{
-            // Ищем организатора КТ
-        $kt_id = $id;    
+        $kt_id = $id;
+        // наш КТ?
         $SQL = "SELECT count(*) FROM p_ktournaments WHERE id = $id AND manager = $S->id";
         //echo "[$SQL]";
         if ($db->GetValue($SQL,0) == 1 ) {
-        	// проверить статус КТ
-        	$SQL = "SELECT state FROM p_ktournaments WHERE id = $id AND manager = $S->id";
+        	// проверить статус нашего КТ
+        	$SQL = "SELECT state FROM p_ktournaments WHERE id = $id";
         	$state = $db->GetValue($SQL, 'state');
-        	if ( $state == 0) {
+        	if ($state == 0) { // турнир на модерации - можно редактировать
         		edit_newkt();
-        	} if ($state == 2) {
+        	} elseif ($state == 2) { // турнир закрыт для заявок - только инфо
         		print_kt_info();
-        	}else {
+        	} else { // турнир набирает участников
         		set_team_kt($id);
         		print_kt_info();
-        		//print_form_kt();
         	}
         }
-        else    print_kt_info();
-        
-        if (check_kt_access($id)== true)  kt_join();
+        else {
+            // не наш КТ - инфо и возможно подача заявки
+            print_kt_info();
+            if (check_kt_access($id)== true)  kt_join();
+        }
     } break;
 
-    // удаление своей заявки
-    case "del_req":
-    del_team_req($id);
-    //set_team_kt($id);
-    print_kt_info();
-    break;
+    case "del_req":{ // удаление своей заявки
+        del_team_req($id);
+        print_kt_info();
+    } break;
 
-    case "new":
-    //kt_new();
-    	create_newkt();
-    break;
+    case "new":{
+    	edit_newkt(true);
+    } break;
     
-    case "set": {
-            set_team_kt($id);
-    } break;
-
-    case "del_team": {
+    case "del_team":{ // организатор удаляет команду
         delete_team_from_kt($tid,$id);
     	set_team_kt($id);
         print_kt_info();
     } break;
 
-    case "join":
-    if (check_kt_access($id)== true)  kt_join();
-    print_kt_info();
-    break;
-    
-   case "edit":
-   		edit_newkt();
-   	//print_form_kt();
-    //kt_edit();
-    break;
-} 
+    case "join":{ // подача заявки на участие
+        if (check_kt_access($id)== true)  kt_join();
+        print_kt_info();
+    } break;
+}
 
 EndMainTable();
 ShowPart(4);
